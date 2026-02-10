@@ -1,53 +1,70 @@
-const sqlite3 = require('sqlite3').verbose();
+// Firebase 사용자를 관리자로 변경하는 스크립트
+// 사용법: node server/make-admin.js <학번>
+
+const admin = require('firebase-admin');
 const path = require('path');
+const fs = require('fs');
 
-const dbPath = path.join(__dirname, 'db.sqlite');
-const db = new sqlite3.Database(dbPath);
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
-console.log('관리자 권한 부여 중...');
+// Firebase Admin 초기화
+if (!admin.apps.length) {
+  const serviceAccountPath = path.join(__dirname, 'serviceAccountKey.json');
+  
+  if (fs.existsSync(serviceAccountPath)) {
+    const serviceAccount = require(serviceAccountPath);
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount)
+    });
+  } else {
+    admin.initializeApp({
+      credential: admin.credential.applicationDefault(),
+      projectId: process.env.VITE_FIREBASE_PROJECT_ID
+    });
+  }
+}
 
-// 먼저 가장 최근 일반 회원 찾기
-db.get(
-  `SELECT id FROM users WHERE role = 'member' ORDER BY id DESC LIMIT 1`,
-  (err, row) => {
-    if (err) {
-      console.error('❌ 오류 발생:', err);
-      db.close();
-      return;
+const db = admin.firestore();
+
+async function makeAdmin() {
+  const studentId = process.argv[2];
+  
+  if (!studentId) {
+    console.log('❌ 사용법: node server/make-admin.js <학번>');
+    console.log('예시: node server/make-admin.js 2020310054');
+    process.exit(1);
+  }
+
+  try {
+    console.log(`🔍 학번 ${studentId} 검색 중...`);
+    
+    const usersRef = db.collection('users');
+    const snapshot = await usersRef.where('studentId', '==', studentId).get();
+    
+    if (snapshot.empty) {
+      console.log('❌ 해당 학번의 사용자를 찾을 수 없습니다.');
+      process.exit(1);
     }
     
-    if (!row) {
-      console.log('⚠️ 변경할 일반 회원이 없습니다.');
-      db.close();
-      return;
-    }
-
-    // 해당 회원을 관리자로 변경
-    const userId = row.id;
-    db.run(
-      `UPDATE users SET role = 'admin', isAdmin = 1 WHERE id = ?`,
-      [userId],
-      function(err) {
-        if (err) {
-          console.error('❌ 오류 발생:', err);
-        } else if (this.changes > 0) {
-          console.log('✅ 1명의 회원이 관리자로 변경되었습니다.');
-          
-          // 변경된 사용자 정보 확인
-          db.get(
-            `SELECT id, name, role, isAdmin FROM users WHERE id = ?`,
-            [userId],
-            (err, row) => {
-              if (row) {
-                console.log(`   이름: ${row.name}`);
-                console.log(`   역할: ${row.role}`);
-                console.log(`   isAdmin: ${row.isAdmin}`);
-              }
-              db.close();
-            }
-          );
-        }
-      }
-    );
+    const userDoc = snapshot.docs[0];
+    const userData = userDoc.data();
+    
+    await userDoc.ref.update({
+      role: 'admin',
+      isAdmin: true,
+      status: 'approved'
+    });
+    
+    console.log('✅ 관리자 권한이 부여되었습니다!');
+    console.log(`   이름: ${userData.name}`);
+    console.log(`   학번: ${userData.studentId}`);
+    console.log(`   역할: admin`);
+    
+    process.exit(0);
+  } catch (error) {
+    console.error('❌ 오류 발생:', error);
+    process.exit(1);
   }
-);
+}
+
+makeAdmin();

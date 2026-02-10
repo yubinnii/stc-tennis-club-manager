@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { AppRoute, ApprovalRequest } from '../types';
 import Navigation from '../components/Navigation';
+import { getApprovals, approveUser, rejectUser } from '../services/firebaseApi';
 
 interface AdminProps {
   navigate: (route: AppRoute) => void;
@@ -13,44 +14,33 @@ const Admin: React.FC<AdminProps> = ({ navigate }) => {
   const [tab, setTab] = useState<'pending' | 'approved' | 'rejected'>('pending');
 
   useEffect(() => {
-    const fetchApprovals = async () => {
+    const fetchApprovalsData = async () => {
       try {
-        const resp = await fetch('http://localhost:4000/approvals/all');
-        if (resp.ok) {
-          const data = await resp.json();
-          setApprovals(data);
-        }
+        const data = await getApprovals();
+        setApprovals(data);
       } catch (e) {
         console.error(e);
       } finally {
         setLoading(false);
       }
     };
-    fetchApprovals();
+    fetchApprovalsData();
   }, []);
 
-  const fetchApprovals = async () => {
+  const fetchApprovalsData = async () => {
     try {
-      const resp = await fetch('http://localhost:4000/approvals/all');
-      if (resp.ok) {
-        const data = await resp.json();
-        setApprovals(data);
-      }
+      const data = await getApprovals();
+      setApprovals(data);
     } catch (e) {
       console.error(e);
     }
   };
 
-  const handleApprove = async (id: string) => {
+  const handleApprove = async (id: string, userId: string) => {
     try {
-      const resp = await fetch(`http://localhost:4000/approvals/${id}/approve`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      if (resp.ok) {
-        window.alert('승인되었습니다.');
-        await fetchApprovals();
-      }
+      await approveUser(id, userId, 'member');
+      window.alert('승인되었습니다.');
+      await fetchApprovalsData();
     } catch (e) {
       window.alert('승인 실패');
     }
@@ -58,14 +48,9 @@ const Admin: React.FC<AdminProps> = ({ navigate }) => {
 
   const handleReject = async (id: string) => {
     try {
-      const resp = await fetch(`http://localhost:4000/approvals/${id}/reject`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      if (resp.ok) {
-        window.alert('거절되었습니다.');
-        await fetchApprovals();
-      }
+      await rejectUser(id);
+      window.alert('거절되었습니다.');
+      await fetchApprovalsData();
     } catch (e) {
       window.alert('거절 실패');
     }
@@ -138,7 +123,7 @@ const Admin: React.FC<AdminProps> = ({ navigate }) => {
                       <span className="material-symbols-rounded text-lg">close</span>
                       거절
                     </button>
-                    <button onClick={() => handleApprove(req.id)} className="flex-1 py-2.5 bg-[#0B5B41] text-white font-bold text-sm rounded-xl hover:bg-[#0a4a33] transition-all flex items-center justify-center gap-2">
+                    <button onClick={() => handleApprove(req.id, req.userId || '')} className="flex-1 py-2.5 bg-[#0B5B41] text-white font-bold text-sm rounded-xl hover:bg-[#0a4a33] transition-all flex items-center justify-center gap-2">
                       <span className="material-symbols-rounded text-lg">check</span>
                       승인
                     </button>

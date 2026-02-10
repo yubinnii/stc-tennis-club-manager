@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { AppRoute } from '../types';
 import Navigation from '../components/Navigation';
+import { getUserCanball, updateCanballPool, getCanballPool, addCanballToUser, getCanballReceivedUsers } from '../services/firebaseApi';
 
 interface CanBallProps {
   navigate: (route: AppRoute) => void;
@@ -31,11 +32,15 @@ const CanBall: React.FC<CanBallProps> = ({ navigate, userId, isAdmin }) => {
 
   const fetchCanballData = async () => {
     try {
-      const resp = await fetch(`http://localhost:4000/canball/${userId}`);
-      if (resp.ok) {
-        const data = await resp.json();
-        setCanBallData(data);
-      }
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth() + 1;
+      
+      const poolData = await getCanballPool(year, month);
+      setCanBallData({
+        canBallCount: poolData?.available || 0,
+        received: false // TODO: 사용자별 수령 여부 확인
+      });
     } catch (e) {
       console.error(e);
     } finally {
@@ -45,11 +50,12 @@ const CanBall: React.FC<CanBallProps> = ({ navigate, userId, isAdmin }) => {
 
   const fetchReceivedUsers = async () => {
     try {
-      const resp = await fetch(`http://localhost:4000/canball/received/${year}/${month}`);
-      if (resp.ok) {
-        const data = await resp.json();
-        setReceivedUsers(data);
-      }
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth() + 1;
+      
+      const users = await getCanballReceivedUsers(year, month);
+      setReceivedUsers(users);
     } catch (e) {
       console.error(e);
     }
@@ -57,40 +63,74 @@ const CanBall: React.FC<CanBallProps> = ({ navigate, userId, isAdmin }) => {
 
   const handleReceive = async () => {
     try {
-      const resp = await fetch(`http://localhost:4000/canball/${userId}/receive`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      if (resp.ok) {
-        window.alert('캔볼을 수령했습니다!');
-        fetchCanballData();
-      } else if (resp.status === 400) {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth() + 1;
+      
+      // 사용자가 이미 이번 달 캔볼을 수령했는지 확인
+      const userCanball = await getUserCanball(userId);
+      const alreadyReceived = userCanball.some(
+        (cb: any) => cb.year === year && cb.month === month
+      );
+      
+      if (alreadyReceived) {
         window.alert('이미 이번 달 캔볼을 수령했습니다.');
+        return;
       }
+      
+      // 캔볼 풀 확인
+      const pool = await getCanballPool(year, month);
+      if (!pool || pool.available <= 0) {
+        window.alert('수령 가능한 캔볼이 없습니다.');
+        return;
+      }
+      
+      // 사용자에게 캔볼 추가
+      await addCanballToUser(userId, year, month);
+      
+      // 풀 수량 감소
+      await updateCanballPool(year, month, pool.available - 1);
+      
+      window.alert('캔볼을 수령했습니다!');
+      await fetchCanballData();
+      await fetchReceivedUsers();
+      setCanBallData((prev: any) => ({ ...prev, received: true }));
     } catch (e) {
-      window.alert('수령 실패');
+      console.error(e);
+      window.alert('수령 실패: ' + (e as Error).message);
     }
   };
 
   const handleAdjust = async () => {
     if (adjustAmount === 0) {
-      window.alert('수량을 입력해주세요.');
+      window.alert('조정 수량을 입력해주세요.');
       return;
     }
     try {
-      const resp = await fetch(`http://localhost:4000/canball/${userId}/adjust`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: adjustAmount })
-      });
-      if (resp.ok) {
-        window.alert('캔볼 수량이 조정되었습니다.');
-        setAdjustAmount(0);
-        setAdjusting(false);
-        fetchCanballData();
-      }
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth() + 1;
+      
+      // 현재 수량 조회
+      const currentPool = await getCanballPool(year, month);
+      const currentAmount = currentPool?.available || 0;
+      
+      // 새로운 수량 계산 (현재 수량 + 조정값)
+      const newAmount = Math.max(0, currentAmount + adjustAmount);
+      
+      // 업데이트
+      await updateCanballPool(year, month, newAmount);
+      
+      const changeText = adjustAmount > 0 ? `+${adjustAmount}` : `${adjustAmount}`;
+      window.alert(`캔볼 수량이 조정되었습니다. (${currentAmount} → ${newAmount})`);
+      setAdjustAmount(0);
+      setAdjusting(false);
+      
+      // 데이터 다시 로드
+      await fetchCanballData();
     } catch (e) {
-      window.alert('조정 실패');
+      console.error(e);
+      window.alert('조정 실패: ' + (e as Error).message);
     }
   };
 
@@ -148,11 +188,15 @@ const CanBall: React.FC<CanBallProps> = ({ navigate, userId, isAdmin }) => {
                     </button>
                   ) : (
                     <div className="space-y-3">
+                      <div className="space-y-2">
+                        <label className="block text-sm font-bold text-gray-700">조정 수량</label>
+                        <p className="text-xs text-gray-500">양수면 추가, 음수면 감소 (예: 5, -3)</p>
+                      </div>
                       <input
                         type="number"
                         value={adjustAmount}
                         onChange={(e) => setAdjustAmount(parseInt(e.target.value) || 0)}
-                        placeholder="수량 입력 (음수면 감소)"
+                        placeholder="예: 10 또는 -5"
                         className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0B5B41] focus:ring-2 focus:ring-[#0B5B41]/20"
                       />
                       <div className="flex gap-2">
@@ -185,7 +229,7 @@ const CanBall: React.FC<CanBallProps> = ({ navigate, userId, isAdmin }) => {
                           <img src={user.avatar} alt={user.name} className="w-8 h-8 rounded-full object-cover" />
                           <div className="flex-1">
                             <p className="font-semibold text-gray-800 text-sm">{user.name}</p>
-                            <p className="text-[10px] text-gray-400">{new Date(user.createdAt).toLocaleTimeString('ko-KR')}</p>
+                            <p className="text-[10px] text-gray-400">{new Date(user.createdAt).toLocaleDateString('ko-KR')}</p>
                           </div>
                         </div>
                       ))}

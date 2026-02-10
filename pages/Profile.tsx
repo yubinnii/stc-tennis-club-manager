@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { AppRoute, User } from '../types';
 import Navigation from '../components/Navigation';
-
+import { updateUser, uploadAvatar } from '../services/firebaseApi';
 interface ProfileProps {
   user: User;
   navigate: (route: AppRoute) => void;
@@ -58,26 +58,18 @@ const Profile: React.FC<ProfileProps> = ({ user, navigate, onLogout }) => {
     if (!avatarPreview) return;
     setUploading(true);
     try {
-      const resp = await fetch(`http://localhost:4000/users/${user.id}/avatar`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ avatar: avatarPreview })
-      });
-      if (!resp.ok) {
-        window.alert('업로드에 실패했습니다.');
-        return;
-      }
-      const updated = await resp.json();
+      const newAvatarUrl = await uploadAvatar(user.id, avatarPreview);
       window.alert('프로필 사진이 업데이트되었습니다.');
       // update app-level user if callback provided
       if ((onUpdateUser as any) && typeof onUpdateUser === 'function') {
-        onUpdateUser(updated);
+        onUpdateUser({ ...user, avatar: newAvatarUrl });
       }
       // update local preview and navigate home
-      setAvatarPreview(updated.avatar);
+      setAvatarPreview(newAvatarUrl);
       navigate(AppRoute.HOME);
     } catch (e) {
-      window.alert('서버에 연결할 수 없습니다.');
+      console.error(e);
+      window.alert('업로드에 실패했습니다: ' + (e as Error).message);
     } finally {
       setUploading(false);
     }

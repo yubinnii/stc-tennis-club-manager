@@ -1,6 +1,36 @@
 
 import React, { useState, useEffect } from 'react';
 import { AppRoute, User } from '../types';
+import { getAllUsers, createMatch, getUser, updateUser } from '../services/firebaseApi';
+
+// 점수 계산 로직
+function calculatePoints(score: string, isWinner: boolean, isSingles: boolean): number {
+  const [winnerScore, loserScore] = score.split('-').map(s => parseInt(s.trim()));
+  const diff = winnerScore - loserScore;
+  
+  if (isSingles) {
+    // 단식 점수표
+    const pointsMap: { [key: number]: number } = {
+      6: 45, 5: 41, 4: 36, 3: 30, 2: 24, 1: 18
+    };
+    const points = pointsMap[diff] || 18;
+    return isWinner ? points : -points;
+  } else {
+    // 복식 점수표
+    const pointsMap: { [key: number]: number } = {
+      6: 15, 5: 14, 4: 12, 3: 10, 2: 8, 1: 6
+    };
+    const points = pointsMap[diff] || 6;
+    return isWinner ? points : -points;
+  }
+}
+
+function calculateTier(singlesPoint: number, doublesPoint: number): 'Gold' | 'Silver' | 'Bronze' {
+  const avgPoint = (singlesPoint + doublesPoint) / 2;
+  if (avgPoint >= 1550) return 'Gold';
+  if (avgPoint >= 1450) return 'Silver';
+  return 'Bronze';
+}
 
 interface MatchFormProps {
   userId: string;
@@ -25,10 +55,8 @@ const MatchForm: React.FC<MatchFormProps> = ({ userId, user, navigate, onUpdateU
 
   const fetchUsers = async () => {
     try {
-      const resp = await fetch('http://localhost:4000/users/list');
-      if (resp.ok) {
-        setUsers(await resp.json());
-      }
+      const userList = await getAllUsers();
+      setUsers(userList);
     } catch (e) {
       console.error(e);
     }
@@ -100,45 +128,64 @@ const MatchForm: React.FC<MatchFormProps> = ({ userId, user, navigate, onUpdateU
 
     setSubmitting(true);
     try {
-      const resp = await fetch('http://localhost:4000/matches', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type,
-          winnerId,
-          loserId,
-          winnerIdSecond: type === 'Doubles' ? winnerIdSecond : null,
-          loserIdSecond: type === 'Doubles' ? loserIdSecond : null,
-          score
-        })
+      const isSingles = type === 'Singles';
+      
+      // 매치 생성
+      const now = new Date();
+      await createMatch({
+        date: now.toISOString().split('T')[0],
+        time: now.toTimeString().split(' ')[0],
+        type,
+        winner: type === 'Doubles' ? [winnerId, winnerIdSecond] : [winnerId],
+        loser: type === 'Doubles' ? [loserId, loserIdSecond] : [loserId],
+        score,
+        month: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
       });
-      if (resp.ok) {
-        window.alert('경기 결과가 저장되었습니다.');
-        setWinnerId('');
-        setLoserId('');
-        setWinnerIdSecond('');
-        setLoserIdSecond('');
-        setScore('');
-        
-        // 사용자 정보 갱신 - 현재 사용자의 포인트 업데이트
-        try {
-          const userResp = await fetch('http://localhost:4000/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ studentId: user.studentId, password: user.studentId })
-          });
-          if (userResp.ok) {
-            const updatedUser = await userResp.json();
-            if (onUpdateUser) {
-              onUpdateUser(updatedUser);
-            }
-          }
-        } catch (e) {
-          console.error('사용자 정보 갱신 실패:', e);
+
+      // 점수 계산 및 업데이트
+      const pointChange = calculatePoints(score, true, isSingles);
+      const playerIds = type === 'Doubles' 
+        ? [winnerId, winnerIdSecond, loserId, loserIdSecond]
+        : [winnerId, loserId];
+
+      for (const playerId of playerIds) {
+        const player = await getUser(playerId);
+        if (!player) continue;
+
+        const isWinner = playerId === winnerId || playerId === winnerIdSecond;
+        const points = isWinner ? pointChange : -pointChange;
+
+        let newSinglesPoint = player.singlesPoint;
+        let newDoublesPoint = player.doublesPoint;
+
+        if (isSingles) {
+          newSinglesPoint = Math.max(0, player.singlesPoint + points);
+        } else {
+          newDoublesPoint = Math.max(0, player.doublesPoint + points);
         }
+
+        await updateUser(playerId, {
+          singlesPoint: newSinglesPoint,
+          doublesPoint: newDoublesPoint,
+          tier: calculateTier(newSinglesPoint, newDoublesPoint)
+        });
+      }
+
+      window.alert('경기 결과가 저장되었습니다.');
+      setWinnerId('');
+      setLoserId('');
+      setWinnerIdSecond('');
+      setLoserIdSecond('');
+      setScore('');
+      
+      // 현재 사용자 정보 갱신
+      const updatedUser = await getUser(user.id);
+      if (updatedUser && onUpdateUser) {
+        onUpdateUser(updatedUser);
       }
     } catch (e) {
-      window.alert('저장 실패');
+      console.error(e);
+      window.alert('저장 실패: ' + (e as Error).message);
     } finally {
       setSubmitting(false);
     }

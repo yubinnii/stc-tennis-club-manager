@@ -123,7 +123,7 @@ app.post('/signup', (req, res) => {
   const userRole = role || 'member';
   const status = userRole === 'admin' ? 'pending' : 'approved';
   const userId = `user_${Date.now()}`;
-  const avatar = 'http://localhost:4000/default-profile.png';
+  const avatar = `${req.protocol}://${req.get('host')}/default-profile.png`;
 
   db.run(
     `INSERT INTO users (id, name, studentId, password, rank, tier, singlesPoint, doublesPoint, isAdmin, avatar, role, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,

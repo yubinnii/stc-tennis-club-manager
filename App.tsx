@@ -12,6 +12,8 @@ import Signup from './pages/Signup';
 import Profile from './pages/Profile';
 import TierGuide from './pages/TierGuide';
 import MyScores from './pages/MyScores';
+import Navigation from './components/Navigation';
+import { signUp, login, getCurrentUser } from './services/firebaseApi';
 
 const MOCK_USER: User = {
   id: 'user_1',
@@ -31,6 +33,7 @@ const App: React.FC = () => {
   const [currentRoute, setCurrentRoute] = useState<AppRoute>(AppRoute.LOGIN);
   const [user, setUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>([MOCK_USER]);
+  const [routeHistory, setRouteHistory] = useState<AppRoute[]>([]);
 
   useEffect(() => {
     // If we're logged in, go home.
@@ -52,65 +55,44 @@ const App: React.FC = () => {
   });
 
   const handleSignup = async (data?: Partial<User>) => {
-    if (!data || !data.studentId || !data.name) return;
+    if (!data || !data.studentId || !data.name || !data.password) {
+      window.alert('모든 정보를 입력해주세요.');
+      return;
+    }
     try {
-      const resp = await fetch('http://localhost:4000/signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: data.name, studentId: data.studentId, password: data.studentId, role: data.role })
-      });
-      if (resp.status === 201) {
-        const result = await resp.json();
-        if (result.status === 'pending') {
-          window.alert('관리자 신청이 접수되었습니다. 관리자 승인 후 로그인이 가능합니다.');
-        } else {
-          window.alert('회원가입이 완료되었습니다. 로그인해주세요.');
-        }
-        setCurrentRoute(AppRoute.LOGIN);
-      } else if (resp.status === 409) {
+      await signUp(data.name, data.studentId, data.password);
+      window.alert('회원가입이 완료되었습니다. 로그인해주세요.');
+      setCurrentRoute(AppRoute.LOGIN);
+    } catch (e: any) {
+      if (e.code === 'auth/email-already-in-use') {
         window.alert('이미 존재하는 학번입니다.');
       } else {
-        window.alert('회원가입에 실패했습니다.');
+        window.alert('회원가입에 실패했습니다: ' + e.message);
       }
-    } catch (e) {
-      window.alert('서버에 연결할 수 없습니다.');
     }
   };
 
   const handleLogin = async (data?: Partial<User>) => {
-    if (!data || !data.studentId) {
-      // fallback to mock for quick demo
-      setUser(MOCK_USER);
-      setCurrentRoute(AppRoute.HOME);
+    if (!data || !data.studentId || !data.password) {
+      window.alert('학번과 비밀번호를 입력해주세요.');
       return;
     }
 
     try {
-      const resp = await fetch('http://localhost:4000/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ studentId: data.studentId, password: data.studentId })
-      });
-      if (!resp.ok) {
-        const err = await resp.json();
-        if (resp.status === 403 && err.error === 'pending_approval') {
-          window.alert('관리자 승인 대기 중입니다. 승인 후 로그인이 가능합니다.');
-        } else if (resp.status === 401) {
-          window.alert('학번 또는 비밀번호가 올바르지 않습니다.');
-        } else {
-          window.alert('로그인에 실패했습니다.');
-        }
-        return;
-      }
-      const u = await resp.json();
-      setUser(u);
+      const user = await login(data.studentId, data.password);
+      setUser(user);
       setCurrentRoute(AppRoute.HOME);
-    } catch (e) {
-      window.alert('서버에 연결할 수 없습니다.');
+    } catch (e: any) {
+      window.alert('로그인에 실패했습니다: ' + e.message);
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await import('./services/firebaseApi').then(m => m.logout());
+    } catch (e) {
+      console.error(e);
+    }
     setUser(null);
     setCurrentRoute(AppRoute.LOGIN);
   };
@@ -152,6 +134,7 @@ const App: React.FC = () => {
     <div className="flex justify-center min-h-screen bg-slate-50 dark:bg-black font-sans">
       <div className="w-full max-w-md bg-white dark:bg-[#121212] min-h-screen flex flex-col relative shadow-2xl overflow-hidden">
         {renderPage()}
+        {user && <Navigation activeRoute={currentRoute} navigate={setCurrentRoute} />}
       </div>
     </div>
   );

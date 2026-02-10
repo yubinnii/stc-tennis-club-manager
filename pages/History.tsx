@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { AppRoute, User } from '../types';
+import { getMatches, deleteMatch } from '../services/firebaseApi';
 
 interface HistoryProps {
   navigate: (route: AppRoute) => void;
@@ -20,11 +21,8 @@ const History: React.FC<HistoryProps> = ({ navigate, isAdmin, user, onUpdateUser
 
   const fetchMatches = async () => {
     try {
-      const resp = await fetch('http://localhost:4000/matches');
-      if (resp.ok) {
-        const data = await resp.json();
-        setMatches(data.filter((m: any) => m.type === filter));
-      }
+      const data = await getMatches();
+      setMatches(data.filter((m: any) => m.type === filter));
     } catch (e) {
       console.error(e);
     } finally {
@@ -35,29 +33,20 @@ const History: React.FC<HistoryProps> = ({ navigate, isAdmin, user, onUpdateUser
   const handleDelete = async (id: string) => {
     if (!window.confirm('경기 기록을 삭제하시겠습니까?')) return;
     try {
-      const resp = await fetch(`http://localhost:4000/matches/${id}`, { method: 'DELETE' });
-      if (resp.ok) {
-        window.alert('삭제되었습니다.');
-        fetchMatches();
-        
-        // 사용자 정보 갱신
-        if (user && onUpdateUser) {
-          try {
-            const userResp = await fetch('http://localhost:4000/login', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ studentId: user.studentId, password: user.studentId })
-            });
-            if (userResp.ok) {
-              const updatedUser = await userResp.json();
-              onUpdateUser(updatedUser);
-            }
-          } catch (e) {
-            console.error('사용자 정보 갱신 실패:', e);
-          }
+      await deleteMatch(id);
+      window.alert('삭제되었습니다.');
+      fetchMatches();
+      
+      // 사용자 정보 갱신
+      if (user && onUpdateUser) {
+        const { getUser } = await import('../services/firebaseApi');
+        const updatedUser = await getUser(user.id);
+        if (updatedUser) {
+          onUpdateUser(updatedUser);
         }
       }
     } catch (e) {
+      console.error(e);
       window.alert('삭제 실패');
     }
   };

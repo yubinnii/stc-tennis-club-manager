@@ -38,11 +38,16 @@ const TierGuide: React.FC<TierGuideProps> = ({ navigate }) => {
 
   return (
     <div className="flex flex-col h-full bg-[#F8FAFC]">
-      <header className="sticky top-0 z-50 bg-[#0B5B41] text-white px-4 py-4 flex items-center shadow-md">
-        <button onClick={() => navigate(AppRoute.HOME)} className="p-2 hover:bg-white/10 rounded-md"><span className="material-symbols-rounded text-white">arrow_back_ios_new</span></button>
-        <div className="flex-1 text-center pr-8">
-          <h1 className="text-lg font-bold">티어 기준표</h1>
-        </div>
+      <header className="sticky top-0 z-50 bg-[#0B5B41] text-white px-2 py-4 flex items-center justify-between shadow-md pointer-events-auto">
+        <button 
+          onClick={() => navigate(AppRoute.HOME)}
+          className="w-12 h-12 flex items-center justify-center hover:bg-white/10 rounded-lg active:bg-white/20 flex-shrink-0 pointer-events-auto cursor-pointer relative z-50"
+          style={{ WebkitUserSelect: 'none', userSelect: 'none' }}
+        >
+          <span className="material-symbols-rounded text-white text-2xl pointer-events-none">arrow_back_ios_new</span>
+        </button>
+        <h1 className="text-lg font-bold flex-1 text-center pointer-events-none">티어 기준</h1>
+        <div className="w-12" />
       </header>
 
       <main className="flex-1 p-6 space-y-6 overflow-y-auto hide-scrollbar pb-24">

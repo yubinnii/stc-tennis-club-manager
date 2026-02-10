@@ -38,7 +38,7 @@ const Signup: React.FC<SignupProps> = ({ onSignup, navigate }) => {
 
           <div className="flex gap-3">
             <button onClick={() => navigate(AppRoute.LOGIN)} className="flex-1 py-3 border border-gray-200 rounded-xl">취소</button>
-            <button onClick={() => onSignup({ name, studentId, role })} className="flex-1 py-3 bg-black text-white rounded-xl">회원가입</button>
+            <button onClick={() => onSignup({ name, studentId, password, role })} className="flex-1 py-3 bg-black text-white rounded-xl">회원가입</button>
           </div>
         </div>
       </div>

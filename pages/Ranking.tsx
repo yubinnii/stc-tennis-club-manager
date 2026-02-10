@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { AppRoute, User } from '../types';
+import { getAllUsers } from '../services/firebaseApi';
 
 interface RankingProps {
   user: User;
@@ -19,10 +20,13 @@ const Ranking: React.FC<RankingProps> = ({ user, navigate, isAdmin }) => {
 
   const fetchRanking = async () => {
     try {
-      const resp = await fetch(`http://localhost:4000/ranking/${type}`);
-      if (resp.ok) {
-        setRanking(await resp.json());
-      }
+      const users = await getAllUsers();
+      const sorted = users.sort((a, b) => {
+        const pointA = type === 'Singles' ? a.singlesPoint : a.doublesPoint;
+        const pointB = type === 'Singles' ? b.singlesPoint : b.doublesPoint;
+        return pointB - pointA;
+      });
+      setRanking(sorted);
     } catch (e) {
       console.error(e);
     } finally {
@@ -33,14 +37,18 @@ const Ranking: React.FC<RankingProps> = ({ user, navigate, isAdmin }) => {
   const handleReset = async () => {
     if (!window.confirm('모든 점수를 초기화하시겠습니까? (점수의 50%만 유지됩니다)')) return;
     try {
-      const resp = await fetch('http://localhost:4000/ranking/reset', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      if (resp.ok) {
-        window.alert('초기화되었습니다.');
-        fetchRanking();
+      const { getAllUsers, updateUser } = await import('../services/firebaseApi');
+      const users = await getAllUsers();
+      
+      for (const u of users) {
+        await updateUser(u.id, {
+          singlesPoint: Math.floor(u.singlesPoint * 0.5),
+          doublesPoint: Math.floor(u.doublesPoint * 0.5)
+        });
       }
+      
+      window.alert('초기화되었습니다.');
+      fetchRanking();
     } catch (e) {
       window.alert('초기화 실패');
     }

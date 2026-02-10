@@ -17,6 +17,7 @@ export interface User {
   id: string;
   name: string;
   studentId: string;
+  password?: string; // 회원가입/로그인 시에만 사용
   rank: number;
   tier: 'Gold' | 'Silver' | 'Bronze';
   singlesPoint: number;

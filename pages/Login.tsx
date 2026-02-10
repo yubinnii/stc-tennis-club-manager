@@ -51,7 +51,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, navigate }) => {
           </div>
 
           <button 
-            onClick={() => onLogin({ studentId })}
+            onClick={() => onLogin({ studentId, password })}
             className="w-full py-4 bg-black text-white font-bold rounded-xl shadow-lg hover:bg-gray-800 transition-all transform active:scale-[0.98] tracking-widest uppercase"
           >
             로그인

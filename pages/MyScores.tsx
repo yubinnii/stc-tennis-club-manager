@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { AppRoute, User } from '../types';
 import Navigation from '../components/Navigation';
-
+import { getMatchesByUser } from '../services/firebaseApi';
 interface MyScoresProps {
   user: User;
   navigate: (route: AppRoute) => void;
@@ -60,7 +60,7 @@ const MyScores: React.FC<MyScoresProps> = ({ user, navigate }) => {
 
   const fetchScoreHistory = async () => {
     try {
-      const resp = await fetch('http://localhost:4000/matches');
+      const resp = await fetch(`${getApiUrl()}/matches`);
       if (resp.ok) {
         const matches = await resp.json();
         
