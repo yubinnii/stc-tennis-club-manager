@@ -49,23 +49,25 @@ export const signUp = async (name: string, studentId: string, password: string, 
     isAdmin: false,
     avatar: '/default-profile.png',
     role,
-    status: 'pending',
+    status: role === 'admin' ? 'pending' : 'approved',
   };
   
   await setDoc(doc(db, 'users', userCredential.user.uid), newUser);
   
-  // 승인 요청 생성
-  const approvalId = `approval_${Date.now()}`;
-  await setDoc(doc(db, 'approvals', approvalId), {
-    id: approvalId,
-    userId: userCredential.user.uid,
-    name,
-    studentId,
-    role,
-    status: 'pending',
-    createdAt: new Date().toISOString(),
-    avatar: '/default-profile.png',
-  });
+  // 관리자 신청인 경우에만 승인 요청 생성
+  if (role === 'admin') {
+    const approvalId = `approval_${Date.now()}`;
+    await setDoc(doc(db, 'approvals', approvalId), {
+      id: approvalId,
+      userId: userCredential.user.uid,
+      name,
+      studentId,
+      role,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      avatar: '/default-profile.png',
+    });
+  }
   
   return newUser;
 };
