@@ -17,8 +17,7 @@ import {
   deleteDoc,
   orderBy,
 } from 'firebase/firestore';
-import { ref, uploadString, getDownloadURL } from 'firebase/storage';
-import { auth, db, storage } from './firebase';
+import { auth, db } from './firebase';
 import type { User, MatchRecord, ApprovalRequest } from '../types';
 
 // ============ 유틸 함수 ============
@@ -250,22 +249,10 @@ export const getCanballReceivedUsers = async (year: number, month: number) => {
 // ============ 프로필 이미지 업로드 ============
 
 export const uploadAvatar = async (userId: string, avatarDataUrl: string) => {
-  // Base64 데이터에서 파일 타입 추출
-  const mimeMatch = avatarDataUrl.match(/^data:([^;]+);/);
-  const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
-  
-  const storageRef = ref(storage, `avatars/${userId}`);
-  
-  // Firebase Storage에 업로드
-  await uploadString(storageRef, avatarDataUrl, 'data_url', { contentType: mimeType });
-  
-  // 다운로드 URL 획득
-  const downloadUrl = await getDownloadURL(storageRef);
-  
-  // 사용자 정보 업데이트
+  // Firestore에 Base64 데이터로 직접 저장
   await updateDoc(doc(db, 'users', userId), {
-    avatar: downloadUrl
+    avatar: avatarDataUrl
   });
   
-  return downloadUrl;
+  return avatarDataUrl;
 };
