@@ -131,9 +131,40 @@ export const updateUser = async (userId: string, updates: Partial<User>) => {
 
 export const createMatch = async (matchData: Omit<MatchRecord, 'id'>) => {
   const matchId = `match_${Date.now()}`;
+  
+  // winner와 loser ID를 이름으로 변환
+  let matchDataWithNames: any = { ...matchData };
+  
+  // winner names 조회
+  if (matchData.winner && matchData.winner.length > 0) {
+    const winnerUser = await getUser(matchData.winner[0]);
+    matchDataWithNames.winnerName = winnerUser?.name || 'Unknown';
+    
+    if (matchData.winner.length > 1) {
+      const winnerUserSecond = await getUser(matchData.winner[1]);
+      matchDataWithNames.winnerNameSecond = winnerUserSecond?.name || 'Unknown';
+    }
+  }
+  
+  // loser names 조회
+  if (matchData.loser && matchData.loser.length > 0) {
+    const loserUser = await getUser(matchData.loser[0]);
+    matchDataWithNames.loserName = loserUser?.name || 'Unknown';
+    
+    if (matchData.loser.length > 1) {
+      const loserUserSecond = await getUser(matchData.loser[1]);
+      matchDataWithNames.loserNameSecond = loserUserSecond?.name || 'Unknown';
+    }
+  }
+  
+  // createdAt 확인
+  if (!matchDataWithNames.createdAt) {
+    matchDataWithNames.createdAt = new Date().toISOString();
+  }
+  
   await setDoc(doc(db, 'matches', matchId), {
     id: matchId,
-    ...matchData,
+    ...matchDataWithNames,
   });
   return matchId;
 };
