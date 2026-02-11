@@ -149,7 +149,7 @@ const Ranking: React.FC<RankingProps> = ({ user, navigate, isAdmin }) => {
              </div>
              <div className="divide-y divide-gray-100">
                 {ranking.map((member, idx) => {
-                  const points = member.points;
+                  const points = type === 'singles' ? member.singlesPoint : member.doublesPoint;
                   const isCurrentUser = user.id === member.id;
                   return (
                     <div 
