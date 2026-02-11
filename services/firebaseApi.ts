@@ -199,43 +199,65 @@ export const deleteMatch = async (matchId: string) => {
   
   const match = matchDoc.data() as MatchRecord;
   
-  // 2. 점수 계산 함수
-  const calculatePoints = (score: string, isSingles: boolean): number => {
+  // 2. 점수 계산 함수 (MatchForm.tsx와 동일)
+  const calculatePointsForMatch = (score: string, isWinner: boolean, isSingles: boolean): number => {
     const [winnerScore, loserScore] = score.split('-').map(s => parseInt(s.trim()));
     const diff = winnerScore - loserScore;
     
     if (isSingles) {
-      const points = Math.abs(diff) <= 1 ? 1 : 2;
-      return points;
+      // 단식 점수표
+      const pointsMap: { [key: number]: number } = {
+        6: 45, 5: 41, 4: 36, 3: 30, 2: 24, 1: 18
+      };
+      const points = pointsMap[diff] || 18;
+      return isWinner ? points : -points;
     } else {
-      const points = Math.abs(diff) <= 1 ? 2 : 4;
-      return points;
+      // 복식 점수표
+      const pointsMap: { [key: number]: number } = {
+        6: 15, 5: 14, 4: 12, 3: 10, 2: 8, 1: 6
+      };
+      const points = pointsMap[diff] || 6;
+      return isWinner ? points : -points;
     }
   };
   
+  const calculateTier = (singlesPoint: number, doublesPoint: number): 'Gold' | 'Silver' | 'Bronze' => {
+    const avgPoint = (singlesPoint + doublesPoint) / 2;
+    if (avgPoint >= 1550) return 'Gold';
+    if (avgPoint >= 1450) return 'Silver';
+    return 'Bronze';
+  };
+  
   const isSingles = match.type === 'Singles';
-  const pointsForWinner = calculatePoints(match.score, isSingles);
-  const pointsForLoser = calculatePoints(match.score, isSingles);
+  const pointChange = calculatePointsForMatch(match.score, true, isSingles);
   
   // 3. 각 플레이어의 점수 역계산
-  // winner는 +점수를 받았으므로, 삭제할 때 -점수 처리
-  for (const winnerId of match.winner) {
-    const user = await getUser(winnerId);
-    if (user) {
-      await updateUser(winnerId, {
-        points: Math.max(0, (user.points || 0) - pointsForWinner)
-      });
+  const playerIds = match.type === 'Doubles' 
+    ? [...match.winner, ...match.loser]
+    : [...match.winner, ...match.loser];
+
+  for (const playerId of playerIds) {
+    const user = await getUser(playerId);
+    if (!user) continue;
+
+    const isWinner = match.winner.includes(playerId);
+    const points = isWinner ? pointChange : -pointChange;
+
+    // 삭제하므로 역계산: 받았던 점수를 빼기
+    let newSinglesPoint = user.singlesPoint;
+    let newDoublesPoint = user.doublesPoint;
+
+    if (isSingles) {
+      newSinglesPoint = Math.max(0, user.singlesPoint - points);
+    } else {
+      newDoublesPoint = Math.max(0, user.doublesPoint - points);
     }
-  }
-  
-  // loser는 -점수를 받았으므로, 삭제할 때 +점수 처리
-  for (const loserId of match.loser) {
-    const user = await getUser(loserId);
-    if (user) {
-      await updateUser(loserId, {
-        points: (user.points || 0) + pointsForLoser
-      });
-    }
+
+    await updateUser(playerId, {
+      singlesPoint: newSinglesPoint,
+      doublesPoint: newDoublesPoint,
+      tier: calculateTier(newSinglesPoint, newDoublesPoint)
+    });
   }
   
   // 4. 경기 기록 삭제
