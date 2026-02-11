@@ -79,7 +79,7 @@ const Ranking: React.FC<RankingProps> = ({ user, navigate, isAdmin }) => {
     }
   };
 
-  const userRank = ranking.find(r => r.id === user.id);
+  const userRank = ranking.find(r => r.id === user.id) || ranking.find(r => r.studentId === user.studentId);
   const userPoints = type === 'singles' ? user.singlesPoint : user.doublesPoint;
 
   return (
