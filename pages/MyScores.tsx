@@ -48,7 +48,7 @@ const MyScores: React.FC<MyScoresProps> = ({ user, navigate }) => {
 
   useEffect(() => {
     fetchScoreHistory();
-  }, [user.id]);
+  }, [user.id, user.singlesPoint, user.doublesPoint]);
 
   const fetchScoreHistory = async () => {
     try {
@@ -163,17 +163,25 @@ const MyScores: React.FC<MyScoresProps> = ({ user, navigate }) => {
             {filteredHistory.map((history) => (
               <div key={history.id} className={`bg-white p-5 rounded-2xl border-2 shadow-sm hover:shadow-md transition ${history.isWinner ? 'border-blue-400' : 'border-red-400'}`}>
                 <div className="space-y-3">
-                  {/* 날짜, 점수, 스코어 */}
-                  <div className="flex justify-between items-start gap-4">
+                  {/* 날짜와 스코어 */}
+                  <div className="flex justify-between items-start">
                     <div>
                       <p className="text-sm font-bold text-gray-600">{history.date}</p>
                       <p className="text-xs text-gray-400 mt-1">{history.score}</p>
                     </div>
+                    <div className={`text-sm font-bold ${history.pointChange > 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                      {history.pointChange > 0 ? '+' : ''}{history.pointChange}
+                    </div>
+                  </div>
+
+                  {/* 경기 팀 정보 */}
+                  <div className="grid grid-cols-3 gap-3 items-center text-center text-sm">
                     {/* 현재 사용자 팀 */}
                     <div>
                       {history.teamMembers.map((name, idx) => (
                         <p key={idx} className="font-bold text-gray-900">{name}</p>
                       ))}
+                      <p className="text-xs text-gray-500 mt-1">{history.finalPoints.toLocaleString()}점</p>
                     </div>
 
                     {/* vs */}
