@@ -32,8 +32,25 @@ const Ranking: React.FC<RankingProps> = ({ user, navigate, isAdmin }) => {
           const idA = a.studentId || '';
           const idB = b.studentId || '';
           return idA.localeCompare(idB);
-        })
-        .map((u, idx) => ({ ...u, rank: idx + 1 }));
+        });
+
+      let currentRank = 1;
+      let prevPoints: number | null = null;
+      let itemsAtRank = 0;
+
+      const ranked = sorted.map((u) => {
+        const points = type === 'singles' ? (u.singlesPoint || 0) : (u.doublesPoint || 0);
+        if (prevPoints === null || points !== prevPoints) {
+          currentRank += itemsAtRank;
+          itemsAtRank = 1;
+          prevPoints = points;
+        } else {
+          itemsAtRank += 1;
+        }
+        return { ...u, rank: currentRank };
+      });
+
+      setRanking(ranked);
       setRanking(sorted);
     } catch (e) {
       console.error(e);
