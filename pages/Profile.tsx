@@ -9,7 +9,7 @@ interface ProfileProps {
   onUpdateUser?: (user: User) => void;
 }
 
-const Profile: React.FC<ProfileProps> = ({ user, navigate, onLogout }) => {
+const Profile: React.FC<ProfileProps> = ({ user, navigate, onLogout, onUpdateUser }) => {
   const [avatarPreview, setAvatarPreview] = useState<string | undefined>(user.avatar);
   const [uploading, setUploading] = useState(false);
 
