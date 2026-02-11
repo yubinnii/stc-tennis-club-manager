@@ -21,11 +21,19 @@ const Ranking: React.FC<RankingProps> = ({ user, navigate, isAdmin }) => {
   const fetchRanking = async () => {
     try {
       const users = await getAllUsers();
-      const sorted = users.sort((a, b) => {
-        const pointA = type === 'Singles' ? a.singlesPoint : a.doublesPoint;
-        const pointB = type === 'Singles' ? b.singlesPoint : b.doublesPoint;
-        return pointB - pointA;
-      });
+      const sorted = [...users]
+        .sort((a, b) => {
+          const pointA = type === 'singles' ? (a.singlesPoint || 0) : (a.doublesPoint || 0);
+          const pointB = type === 'singles' ? (b.singlesPoint || 0) : (b.doublesPoint || 0);
+          if (pointB !== pointA) return pointB - pointA;
+          const nameA = a.name || '';
+          const nameB = b.name || '';
+          if (nameA !== nameB) return nameA.localeCompare(nameB, 'ko');
+          const idA = a.studentId || '';
+          const idB = b.studentId || '';
+          return idA.localeCompare(idB);
+        })
+        .map((u, idx) => ({ ...u, rank: idx + 1 }));
       setRanking(sorted);
     } catch (e) {
       console.error(e);
