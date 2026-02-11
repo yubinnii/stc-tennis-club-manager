@@ -183,12 +183,12 @@ const Ranking: React.FC<RankingProps> = ({ user, navigate, isAdmin }) => {
                       }`}
                     >
                        <div className="col-span-2 flex justify-center">
-                          {idx < 3 ? (
-                            <span className={`material-symbols-rounded text-lg ${idx === 0 ? 'text-yellow-500' : idx === 1 ? 'text-gray-400' : 'text-orange-600'}`}>
+                          {member.rank <= 3 ? (
+                            <span className={`material-symbols-rounded text-lg ${member.rank === 1 ? 'text-yellow-500' : member.rank === 2 ? 'text-gray-400' : 'text-orange-600'}`}>
                               workspace_premium
                             </span>
                           ) : (
-                            <span className="text-xs font-bold text-gray-400">#{idx + 1}</span>
+                            <span className="text-xs font-bold text-gray-400">#{member.rank}</span>
                           )}
                        </div>
                        <div className="col-span-7 flex items-center gap-3">
