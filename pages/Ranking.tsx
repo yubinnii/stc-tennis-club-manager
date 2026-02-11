@@ -7,9 +7,10 @@ interface RankingProps {
   user: User;
   navigate: (route: AppRoute) => void;
   isAdmin?: boolean;
+  onUpdateUser?: (user: User) => void;
 }
 
-const Ranking: React.FC<RankingProps> = ({ user, navigate, isAdmin }) => {
+const Ranking: React.FC<RankingProps> = ({ user, navigate, isAdmin, onUpdateUser }) => {
   const [type, setType] = useState<'singles' | 'doubles'>('singles');
   const [ranking, setRanking] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,7 +62,7 @@ const Ranking: React.FC<RankingProps> = ({ user, navigate, isAdmin }) => {
   const handleReset = async () => {
     if (!window.confirm('모든 점수를 초기화하고 경기 기록을 삭제하시겠습니까?')) return;
     try {
-      const { getAllUsers, updateUser, deleteAllMatches } = await import('../services/firebaseApi');
+      const { getAllUsers, updateUser, deleteAllMatches, getUser } = await import('../services/firebaseApi');
       const users = await getAllUsers();
       
       // 모든 경기 기록 삭제
@@ -83,6 +84,14 @@ const Ranking: React.FC<RankingProps> = ({ user, navigate, isAdmin }) => {
         });
       }
       
+      // 현재 사용자 정보 갱신
+      if (onUpdateUser) {
+        const updatedUser = await getUser(user.id);
+        if (updatedUser) {
+          onUpdateUser(updatedUser);
+        }
+      }
+      
       window.alert('초기화되었습니다.');
       fetchRanking();
     } catch (e) {
@@ -102,11 +111,7 @@ const Ranking: React.FC<RankingProps> = ({ user, navigate, isAdmin }) => {
         </div>
         {isAdmin && (
           <button 
-            onClick={() => {
-              if (confirm('랭크를 초기화하시겠습니까? (50% 감소 적용)')) {
-                handleReset();
-              }
-            }}
+            onClick={handleReset}
             className="px-3 py-1 bg-red-500 text-white text-xs font-bold rounded-lg"
           >
             초기화

@@ -119,7 +119,7 @@ const App: React.FC = () => {
       case AppRoute.HISTORY:
         return <History isAdmin={user!.isAdmin} navigate={setCurrentRoute} user={user!} onUpdateUser={(u: User) => setUser(u)} />;
       case AppRoute.RANKING:
-        return <Ranking user={user!} isAdmin={user!.isAdmin} navigate={setCurrentRoute} />;
+        return <Ranking user={user!} isAdmin={user!.isAdmin} navigate={setCurrentRoute} onUpdateUser={(u: User) => setUser(u)} />;
       case AppRoute.ADMIN:
         return <Admin navigate={setCurrentRoute} />;
       case AppRoute.TIER_GUIDE:
