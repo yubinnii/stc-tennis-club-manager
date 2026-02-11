@@ -3,38 +3,29 @@ import React, { useState, useEffect } from 'react';
 import { AppRoute, User } from '../types';
 import Navigation from '../components/Navigation';
 import { getMatchesByUser } from '../services/firebaseApi';
+
 interface MyScoresProps {
   user: User;
   navigate: (route: AppRoute) => void;
 }
 
-// Backend의 calculatePoints와 동일한 로직
 const calculatePoints = (type: string, score: string): number => {
   const parts = score.split('-').map(s => parseInt(s.trim()));
   if (parts.length !== 2) return type === 'Singles' ? 30 : 10;
   
   const [winnerScore, loserScore] = parts;
+  const diff = winnerScore - loserScore;
   
   if (type === 'Singles') {
-    switch (loserScore) {
-      case 0: return 45;
-      case 1: return 41;
-      case 2: return 36;
-      case 3: return 30;
-      case 4: return 24;
-      case 5: return 18;
-      default: return 30;
-    }
+    const pointsMap: { [key: number]: number } = {
+      6: 45, 5: 41, 4: 36, 3: 30, 2: 24, 1: 18
+    };
+    return pointsMap[diff] || 30;
   } else {
-    switch (loserScore) {
-      case 0: return 15;
-      case 1: return 14;
-      case 2: return 12;
-      case 3: return 10;
-      case 4: return 8;
-      case 5: return 6;
-      default: return 10;
-    }
+    const pointsMap: { [key: number]: number } = {
+      6: 15, 5: 14, 4: 12, 3: 10, 2: 8, 1: 6
+    };
+    return pointsMap[diff] || 10;
   }
 };
 
@@ -44,9 +35,10 @@ interface ScoreHistory {
   type: 'Singles' | 'Doubles';
   isWinner: boolean;
   pointChange: number;
-  finalPoints: number; // 변화 후 최종 점수
-  teamMembers: string[]; // 현재 사용자 팀
-  opponentMembers: string[]; // 상대팀
+  finalPoints: number;
+  teamMembers: string[];
+  opponentMembers: string[];
+  score: string;
 }
 
 const MyScores: React.FC<MyScoresProps> = ({ user, navigate }) => {
@@ -56,73 +48,65 @@ const MyScores: React.FC<MyScoresProps> = ({ user, navigate }) => {
 
   useEffect(() => {
     fetchScoreHistory();
-  }, []);
+  }, [user.id]);
 
   const fetchScoreHistory = async () => {
     try {
-      const resp = await fetch(`${getApiUrl()}/matches`);
-      if (resp.ok) {
-        const matches = await resp.json();
-        
-        // 현재 사용자의 경기만 필터링하고 점수 변화 계산
-        let rawHistory = matches
-          .filter((m: any) => m.winnerId === user.id || m.loserId === user.id || m.winnerIdSecond === user.id || m.loserIdSecond === user.id)
-          .map((m: any) => {
-            const isWinner = m.winnerId === user.id || m.winnerIdSecond === user.id;
-            
-            // calculatePoints 함수를 사용하여 정확한 포인트 계산
-            const basePointChange = calculatePoints(m.type, m.score);
-            const pointChange = isWinner ? basePointChange : -basePointChange;
+      const matches = await getMatchesByUser(user.id);
+      
+      let rawHistory = matches.map((m: any) => {
+        const isWinner = m.winner.includes(user.id);
+        const basePointChange = calculatePoints(m.type, m.score);
+        const pointChange = isWinner ? basePointChange : -basePointChange;
 
-            // 현재 사용자가 속한 팀과 상대팀 구성
-            let teamMembers: string[] = [];
-            let opponentMembers: string[] = [];
-            
-            if (m.type === 'Singles') {
-              if (isWinner) {
-                teamMembers = [m.winnerName];
-                opponentMembers = [m.loserName];
-              } else {
-                teamMembers = [m.loserName];
-                opponentMembers = [m.winnerName];
-              }
-            } else {
-              if (isWinner) {
-                teamMembers = [m.winnerName, m.winnerNameSecond].filter(Boolean);
-                opponentMembers = [m.loserName, m.loserNameSecond].filter(Boolean);
-              } else {
-                teamMembers = [m.loserName, m.loserNameSecond].filter(Boolean);
-                opponentMembers = [m.winnerName, m.winnerNameSecond].filter(Boolean);
-              }
-            }
-            
-            return {
-              id: m.id,
-              timestamp: new Date(m.createdAt).getTime(),
-              dateStr: new Date(m.createdAt).toLocaleDateString('ko-KR'),
-              type: m.type,
-              isWinner,
-              pointChange,
-              teamMembers,
-              opponentMembers
-            };
-          });
+        let teamMembers: string[] = [];
+        let opponentMembers: string[] = [];
         
-        // 오래된 것부터 정렬 (점수 누적 계산용)
-        rawHistory.sort((a: any, b: any) => a.timestamp - b.timestamp);
+        if (m.type === 'Singles') {
+          if (isWinner) {
+            teamMembers = [m.winnerName];
+            opponentMembers = [m.loserName];
+          } else {
+            teamMembers = [m.loserName];
+            opponentMembers = [m.winnerName];
+          }
+        } else {
+          if (isWinner) {
+            teamMembers = [m.winnerName, m.winnerNameSecond].filter(Boolean);
+            opponentMembers = [m.loserName, m.loserNameSecond].filter(Boolean);
+          } else {
+            teamMembers = [m.loserName, m.loserNameSecond].filter(Boolean);
+            opponentMembers = [m.winnerName, m.winnerNameSecond].filter(Boolean);
+          }
+        }
         
-        // 점수 누적 계산
-        let currentSinglesPoints = user.singlesPoint;
-        let currentDoublesPoints = user.doublesPoint;
-        
-        // 오래된 것부터 역산하여 시작점 구하기
-        const singlesTotal = rawHistory.filter((h: any) => h.type === 'Singles').reduce((sum: number, h: any) => sum - h.pointChange, 0);
-        const doublesTotal = rawHistory.filter((h: any) => h.type === 'Doubles').reduce((sum: number, h: any) => sum - h.pointChange, 0);
-        
-        let singlesPoints = currentSinglesPoints - singlesTotal;
-        let doublesPoints = currentDoublesPoints - doublesTotal;
-        
-        const historyWithFinalPoints = rawHistory.map((h: any) => {
+        return {
+          id: m.id,
+          timestamp: new Date(m.createdAt).getTime(),
+          dateStr: new Date(m.createdAt).toLocaleDateString('ko-KR'),
+          type: m.type,
+          isWinner,
+          pointChange,
+          teamMembers,
+          opponentMembers,
+          score: m.score
+        };
+      });
+      
+      rawHistory.sort((a: any, b: any) => a.timestamp - b.timestamp);
+      
+      const singlesTotal = rawHistory
+        .filter((h: any) => h.type === 'Singles')
+        .reduce((sum: number, h: any) => sum - h.pointChange, 0);
+      const doublesTotal = rawHistory
+        .filter((h: any) => h.type === 'Doubles')
+        .reduce((sum: number, h: any) => sum - h.pointChange, 0);
+      
+      let singlesPoints = user.singlesPoint - singlesTotal;
+      let doublesPoints = user.doublesPoint - doublesTotal;
+      
+      const historyWithFinalPoints = rawHistory
+        .map((h: any) => {
           if (h.type === 'Singles') {
             singlesPoints += h.pointChange;
             return {
@@ -139,11 +123,9 @@ const MyScores: React.FC<MyScoresProps> = ({ user, navigate }) => {
             };
           }
         })
-        // 최신순으로 정렬
         .sort((a: any, b: any) => b.timestamp - a.timestamp);
-        
-        setScoreHistory(historyWithFinalPoints);
-      }
+      
+      setScoreHistory(historyWithFinalPoints);
     } catch (e) {
       console.error(e);
     } finally {
@@ -181,19 +163,12 @@ const MyScores: React.FC<MyScoresProps> = ({ user, navigate }) => {
             {filteredHistory.map((history) => (
               <div key={history.id} className={`bg-white p-5 rounded-2xl border-2 shadow-sm hover:shadow-md transition ${history.isWinner ? 'border-blue-400' : 'border-red-400'}`}>
                 <div className="space-y-3">
-                  {/* 날짜와 점수 */}
+                  {/* 날짜, 점수, 스코어 */}
                   <div className="flex justify-between items-start gap-4">
-                    <p className="text-sm font-bold text-gray-600">{history.date}</p>
-                    <div className="flex flex-col items-end gap-1">
-                      <div className={`px-3 py-1 rounded-lg font-bold text-sm ${history.pointChange > 0 ? 'bg-blue-100 text-blue-600' : 'bg-red-100 text-red-600'}`}>
-                        {history.pointChange > 0 ? '+' : ''}{history.pointChange}
-                      </div>
-                      <p className="text-xs text-gray-500">→ {history.finalPoints.toLocaleString()}점</p>
+                    <div>
+                      <p className="text-sm font-bold text-gray-600">{history.date}</p>
+                      <p className="text-xs text-gray-400 mt-1">{history.score}</p>
                     </div>
-                  </div>
-
-                  {/* 경기 팀 정보 */}
-                  <div className="grid grid-cols-3 gap-2 items-center text-center text-sm">
                     {/* 현재 사용자 팀 */}
                     <div>
                       {history.teamMembers.map((name, idx) => (
