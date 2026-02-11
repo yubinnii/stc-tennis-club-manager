@@ -60,7 +60,8 @@ const App: React.FC = () => {
       return;
     }
     try {
-      await signUp(data.name, data.studentId, data.password);
+      const role = data.role === 'admin' ? 'admin' : 'member';
+      await signUp(data.name, data.studentId, data.password, role);
       window.alert('회원가입이 완료되었습니다. 로그인해주세요.');
       setCurrentRoute(AppRoute.LOGIN);
     } catch (e: any) {

@@ -31,7 +31,7 @@ function calculateTier(singlesPoint: number, doublesPoint: number): 'Gold' | 'Si
 
 // ============ 인증 ============
 
-export const signUp = async (name: string, studentId: string, password: string) => {
+export const signUp = async (name: string, studentId: string, password: string, role: 'member' | 'admin' = 'member') => {
   const email = `${studentId}@stc-tennis.local`;
   const userCredential = await createUserWithEmailAndPassword(auth, email, password);
   
@@ -48,7 +48,7 @@ export const signUp = async (name: string, studentId: string, password: string) 
     doublesPoint,
     isAdmin: false,
     avatar: '/default-profile.png',
-    role: 'member',
+    role,
     status: 'pending',
   };
   
@@ -61,7 +61,7 @@ export const signUp = async (name: string, studentId: string, password: string) 
     userId: userCredential.user.uid,
     name,
     studentId,
-    role: 'member',
+    role,
     status: 'pending',
     createdAt: new Date().toISOString(),
     avatar: '/default-profile.png',
