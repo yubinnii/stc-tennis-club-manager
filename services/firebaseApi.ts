@@ -74,7 +74,14 @@ export const login = async (studentId: string, password: string) => {
   const email = `${studentId}@stc-tennis.local`;
   const userCredential = await signInWithEmailAndPassword(auth, email, password);
   const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
-  return userDoc.data() as User;
+  const user = userDoc.data() as User;
+  
+  // 승인되지 않은 사용자는 로그인 불가
+  if (user.status !== 'approved') {
+    throw new Error('가입 승인을 기다리는 중입니다. 관리자 승인 후 로그인해주세요.');
+  }
+  
+  return user;
 };
 
 export const logout = async () => {
