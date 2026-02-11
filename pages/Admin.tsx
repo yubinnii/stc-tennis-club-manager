@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { AppRoute, ApprovalRequest } from '../types';
 import Navigation from '../components/Navigation';
-import { getApprovals, approveUser, rejectUser } from '../services/firebaseApi';
+import { getAllApprovals, approveUser, rejectUser } from '../services/firebaseApi';
 
 interface AdminProps {
   navigate: (route: AppRoute) => void;
@@ -16,7 +16,7 @@ const Admin: React.FC<AdminProps> = ({ navigate }) => {
   useEffect(() => {
     const fetchApprovalsData = async () => {
       try {
-        const data = await getApprovals();
+        const data = await getAllApprovals();
         setApprovals(data);
       } catch (e) {
         console.error(e);
@@ -29,7 +29,7 @@ const Admin: React.FC<AdminProps> = ({ navigate }) => {
 
   const fetchApprovalsData = async () => {
     try {
-      const data = await getApprovals();
+      const data = await getAllApprovals();
       setApprovals(data);
     } catch (e) {
       console.error(e);

@@ -174,6 +174,12 @@ export const getApprovals = async (): Promise<ApprovalRequest[]> => {
     .sort((a, b) => new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime());
 };
 
+export const getAllApprovals = async (): Promise<ApprovalRequest[]> => {
+  const q = query(collection(db, 'approvals'));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((doc) => doc.data() as ApprovalRequest);
+};
+
 export const approveUser = async (approvalId: string, userId: string, role: 'admin' | 'member' = 'member') => {
   await updateDoc(doc(db, 'approvals', approvalId), { status: 'approved' });
   await updateDoc(doc(db, 'users', userId), {
