@@ -61,6 +61,8 @@ const App: React.FC = () => {
     }
     try {
       const role = data.role === 'admin' ? 'admin' : 'member';
+      console.log('Signup data:', data);
+      console.log('Selected role:', role);
       await signUp(data.name, data.studentId, data.password, role);
       window.alert('회원가입이 완료되었습니다. 로그인해주세요.');
       setCurrentRoute(AppRoute.LOGIN);
