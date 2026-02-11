@@ -190,8 +190,13 @@ export const approveUser = async (approvalId: string, userId: string, role: 'adm
   });
 };
 
-export const rejectUser = async (approvalId: string) => {
+export const rejectUser = async (approvalId: string, userId: string) => {
   await updateDoc(doc(db, 'approvals', approvalId), { status: 'rejected' });
+  // 거절하면 일반 회원으로 변경
+  await updateDoc(doc(db, 'users', userId), {
+    role: 'member',
+    status: 'approved',
+  });
 };
 
 // ============ Can Ball 풀 관리 ============

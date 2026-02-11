@@ -46,9 +46,9 @@ const Admin: React.FC<AdminProps> = ({ navigate }) => {
     }
   };
 
-  const handleReject = async (id: string) => {
+  const handleReject = async (id: string, userId: string) => {
     try {
-      await rejectUser(id);
+      await rejectUser(id, userId);
       window.alert('거절되었습니다.');
       await fetchApprovalsData();
     } catch (e) {
@@ -119,7 +119,7 @@ const Admin: React.FC<AdminProps> = ({ navigate }) => {
                     </div>
                   </div>
                   <div className="flex gap-3">
-                    <button onClick={() => handleReject(req.id)} className="flex-1 py-2.5 bg-gray-50 text-gray-500 font-bold text-sm rounded-xl hover:bg-gray-100 transition-colors flex items-center justify-center gap-2">
+                    <button onClick={() => handleReject(req.id, req.userId || '')} className="flex-1 py-2.5 bg-gray-50 text-gray-500 font-bold text-sm rounded-xl hover:bg-gray-100 transition-colors flex items-center justify-center gap-2">
                       <span className="material-symbols-rounded text-lg">close</span>
                       거절
                     </button>
