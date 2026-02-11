@@ -36,9 +36,9 @@ const Admin: React.FC<AdminProps> = ({ navigate }) => {
     }
   };
 
-  const handleApprove = async (id: string, userId: string) => {
+  const handleApprove = async (id: string, userId: string, role: 'admin' | 'member') => {
     try {
-      await approveUser(id, userId, 'member');
+      await approveUser(id, userId, role);
       window.alert('승인되었습니다.');
       await fetchApprovalsData();
     } catch (e) {
@@ -123,7 +123,7 @@ const Admin: React.FC<AdminProps> = ({ navigate }) => {
                       <span className="material-symbols-rounded text-lg">close</span>
                       거절
                     </button>
-                    <button onClick={() => handleApprove(req.id, req.userId || '')} className="flex-1 py-2.5 bg-[#0B5B41] text-white font-bold text-sm rounded-xl hover:bg-[#0a4a33] transition-all flex items-center justify-center gap-2">
+                    <button onClick={() => handleApprove(req.id, req.userId || '', req.role as 'admin' | 'member')} className="flex-1 py-2.5 bg-[#0B5B41] text-white font-bold text-sm rounded-xl hover:bg-[#0a4a33] transition-all flex items-center justify-center gap-2">
                       <span className="material-symbols-rounded text-lg">check</span>
                       승인
                     </button>
