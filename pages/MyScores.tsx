@@ -167,12 +167,9 @@ const MyScores: React.FC<MyScoresProps> = ({ user, navigate }) => {
               return (
               <div key={history.id} className={`bg-white p-5 rounded-2xl border-2 shadow-sm hover:shadow-md transition ${history.isWinner ? 'border-blue-400' : 'border-red-400'}`}>
                 <div className="space-y-3">
-                  {/* 날짜, 스코어, 점수변화 */}
+                  {/* 날짜와 점수변화 */}
                   <div className="flex justify-between items-start">
-                    <div>
-                      <p className="text-sm font-bold text-gray-600">{history.date}</p>
-                      <p className="text-lg font-bold text-gray-900 mt-1">{history.score}</p>
-                    </div>
+                    <p className="text-sm font-bold text-gray-600">{history.date}</p>
                     <div className={`text-lg font-bold ${history.pointChange > 0 ? 'text-blue-600' : 'text-red-600'}`}>
                       {history.pointChange > 0 ? '+' : ''}{history.pointChange}
                     </div>
