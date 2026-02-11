@@ -51,7 +51,6 @@ const Ranking: React.FC<RankingProps> = ({ user, navigate, isAdmin }) => {
       });
 
       setRanking(ranked);
-      setRanking(sorted);
     } catch (e) {
       console.error(e);
     } finally {
