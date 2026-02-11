@@ -33,7 +33,6 @@ function calculateTier(singlesPoint: number, doublesPoint: number): 'Gold' | 'Si
 
 export const signUp = async (name: string, studentId: string, password: string, role: 'member' | 'admin' = 'member') => {
   const email = `${studentId}@stc-tennis.local`;
-  console.log('SignUp called with role:', role);
   const userCredential = await createUserWithEmailAndPassword(auth, email, password);
   
   const singlesPoint = 1500;
@@ -53,7 +52,6 @@ export const signUp = async (name: string, studentId: string, password: string, 
     status: 'pending',
   };
   
-  console.log('Creating user with role:', newUser.role);
   await setDoc(doc(db, 'users', userCredential.user.uid), newUser);
   
   // 승인 요청 생성

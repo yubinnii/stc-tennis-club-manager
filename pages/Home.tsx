@@ -75,7 +75,7 @@ const Home: React.FC<HomeProps> = ({ user, navigate }) => {
           </div>
         </section>
 
-        {user.isAdmin && (
+        {(user.isAdmin || user.role === 'admin') && (
           <section className="pt-4 border-t border-slate-100">
             <div className="flex items-center gap-2 mb-4 px-1 opacity-50">
                <span className="material-symbols-rounded text-sm">admin_panel_settings</span>
