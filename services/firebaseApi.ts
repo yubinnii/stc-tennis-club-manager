@@ -191,6 +191,54 @@ export const updateMatch = async (matchId: string, updates: Partial<MatchRecord>
 };
 
 export const deleteMatch = async (matchId: string) => {
+  // 1. 삭제할 경기의 데이터 조회
+  const matchDoc = await getDoc(doc(db, 'matches', matchId));
+  if (!matchDoc.exists()) {
+    throw new Error('경기 기록을 찾을 수 없습니다.');
+  }
+  
+  const match = matchDoc.data() as MatchRecord;
+  
+  // 2. 점수 계산 함수
+  const calculatePoints = (score: string, isSingles: boolean): number => {
+    const [winnerScore, loserScore] = score.split('-').map(s => parseInt(s.trim()));
+    const diff = winnerScore - loserScore;
+    
+    if (isSingles) {
+      const points = Math.abs(diff) <= 1 ? 1 : 2;
+      return points;
+    } else {
+      const points = Math.abs(diff) <= 1 ? 2 : 4;
+      return points;
+    }
+  };
+  
+  const isSingles = match.type === 'Singles';
+  const pointsForWinner = calculatePoints(match.score, isSingles);
+  const pointsForLoser = calculatePoints(match.score, isSingles);
+  
+  // 3. 각 플레이어의 점수 역계산
+  // winner는 +점수를 받았으므로, 삭제할 때 -점수 처리
+  for (const winnerId of match.winner) {
+    const user = await getUser(winnerId);
+    if (user) {
+      await updateUser(winnerId, {
+        points: Math.max(0, (user.points || 0) - pointsForWinner)
+      });
+    }
+  }
+  
+  // loser는 -점수를 받았으므로, 삭제할 때 +점수 처리
+  for (const loserId of match.loser) {
+    const user = await getUser(loserId);
+    if (user) {
+      await updateUser(loserId, {
+        points: (user.points || 0) + pointsForLoser
+      });
+    }
+  }
+  
+  // 4. 경기 기록 삭제
   await deleteDoc(doc(db, 'matches', matchId));
 };
 
