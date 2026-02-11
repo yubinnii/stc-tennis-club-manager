@@ -160,28 +160,32 @@ const MyScores: React.FC<MyScoresProps> = ({ user, navigate }) => {
           <div className="flex justify-center items-center h-full"><p className="text-gray-400">점수 기록이 없습니다.</p></div>
         ) : (
           <div className="space-y-3">
-            {filteredHistory.map((history) => (
+            {filteredHistory.map((history) => {
+              const scoreparts = history.score.split('-').map(s => parseInt(s.trim()));
+              const winScore = scoreparts[0] || 0;
+              const loseScore = scoreparts[1] || 0;
+              return (
               <div key={history.id} className={`bg-white p-5 rounded-2xl border-2 shadow-sm hover:shadow-md transition ${history.isWinner ? 'border-blue-400' : 'border-red-400'}`}>
                 <div className="space-y-3">
-                  {/* 날짜와 스코어 */}
+                  {/* 날짜, 스코어, 점수변화 */}
                   <div className="flex justify-between items-start">
                     <div>
                       <p className="text-sm font-bold text-gray-600">{history.date}</p>
-                      <p className="text-xs text-gray-400 mt-1">{history.score}</p>
+                      <p className="text-lg font-bold text-gray-900 mt-1">{history.score}</p>
                     </div>
-                    <div className={`text-sm font-bold ${history.pointChange > 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                    <div className={`text-lg font-bold ${history.pointChange > 0 ? 'text-blue-600' : 'text-red-600'}`}>
                       {history.pointChange > 0 ? '+' : ''}{history.pointChange}
                     </div>
                   </div>
 
                   {/* 경기 팀 정보 */}
-                  <div className="grid grid-cols-3 gap-3 items-center text-center text-sm">
+                  <div className="grid grid-cols-3 gap-3 items-start text-center text-sm">
                     {/* 현재 사용자 팀 */}
                     <div>
                       {history.teamMembers.map((name, idx) => (
                         <p key={idx} className="font-bold text-gray-900">{name}</p>
                       ))}
-                      <p className="text-xs text-gray-500 mt-1">{history.finalPoints.toLocaleString()}점</p>
+                      <p className="text-lg font-bold text-gray-900 mt-1">{history.isWinner ? winScore : loseScore}</p>
                     </div>
 
                     {/* vs */}
@@ -194,11 +198,13 @@ const MyScores: React.FC<MyScoresProps> = ({ user, navigate }) => {
                       {history.opponentMembers.map((name, idx) => (
                         <p key={idx} className="font-bold text-gray-600">{name}</p>
                       ))}
+                      <p className="text-lg font-bold text-gray-600 mt-1">{history.isWinner ? loseScore : winScore}</p>
                     </div>
                   </div>
                 </div>
               </div>
-            ))}
+            );
+            })}
           </div>
         )}
       </main>
