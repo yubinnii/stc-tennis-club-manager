@@ -166,11 +166,12 @@ export const deleteMatch = async (matchId: string) => {
 export const getApprovals = async (): Promise<ApprovalRequest[]> => {
   const q = query(
     collection(db, 'approvals'),
-    where('status', '==', 'pending'),
-    orderBy('createdAt', 'desc')
+    where('status', '==', 'pending')
   );
   const snapshot = await getDocs(q);
-  return snapshot.docs.map((doc) => doc.data() as ApprovalRequest);
+  return snapshot.docs
+    .map((doc) => doc.data() as ApprovalRequest)
+    .sort((a, b) => new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime());
 };
 
 export const approveUser = async (approvalId: string, userId: string, role: 'admin' | 'member' = 'member') => {
