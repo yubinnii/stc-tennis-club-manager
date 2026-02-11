@@ -16,42 +16,55 @@ const Profile: React.FC<ProfileProps> = ({ user, navigate, onLogout }) => {
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    // If file is large, resize/compress it client-side to avoid large payloads
-    const MAX_SIZE = 5 * 1024 * 1024; // 5MB
-    const MAX_WIDTH = 1024;
 
-    const readAndSet = (f: File) => {
-      const r = new FileReader();
-      r.onload = () => setAvatarPreview(String(r.result));
-      r.readAsDataURL(f);
-    };
-
-    if (file.size > MAX_SIZE) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const img = new Image();
-        img.onload = () => {
-          const ratio = Math.min(1, MAX_WIDTH / img.width);
-          const canvas = document.createElement('canvas');
-          canvas.width = Math.round(img.width * ratio);
-          canvas.height = Math.round(img.height * ratio);
-          const ctx = canvas.getContext('2d');
-          if (ctx) {
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            // compress to JPEG at 0.8 quality
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-            setAvatarPreview(dataUrl);
-          } else {
-            // fallback
-            readAndSet(file);
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        
+        // 최대 크기를 더 작게 설정 (기본 512px)
+        const MAX_WIDTH = 512;
+        const MAX_HEIGHT = 512;
+        
+        let width = img.width;
+        let height = img.height;
+        
+        // 종횡비 유지하면서 최대 크기에 맞춤
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height = Math.round((height * MAX_WIDTH) / width);
+            width = MAX_WIDTH;
           }
-        };
-        img.src = String(reader.result);
+        } else {
+          if (height > MAX_HEIGHT) {
+            width = Math.round((width * MAX_HEIGHT) / height);
+            height = MAX_HEIGHT;
+          }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          // 매우 낮은 품질로 압축 (0.5 = 50%)
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
+          
+          // Base64 크기 확인 (대략 1MB 이내인지)
+          const sizeInBytes = dataUrl.length * 0.75; // Base64는 약 33% 오버헤드
+          if (sizeInBytes > 800 * 1024) { // 800KB 이상이면 더 압축
+            const dataUrl2 = canvas.toDataURL('image/jpeg', 0.3);
+            setAvatarPreview(dataUrl2);
+          } else {
+            setAvatarPreview(dataUrl);
+          }
+        }
       };
-      reader.readAsDataURL(file);
-    } else {
-      readAndSet(file);
-    }
+      img.src = String(reader.result);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleUpload = async () => {
