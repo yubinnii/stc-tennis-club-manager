@@ -16,6 +16,7 @@ import {
   getDocs,
   deleteDoc,
   orderBy,
+  writeBatch,
 } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import type { User, MatchRecord, ApprovalRequest } from '../types';
@@ -262,6 +263,18 @@ export const deleteMatch = async (matchId: string) => {
   
   // 4. 경기 기록 삭제
   await deleteDoc(doc(db, 'matches', matchId));
+};
+
+export const deleteAllMatches = async () => {
+  const q = query(collection(db, 'matches'));
+  const snapshot = await getDocs(q);
+  
+  const batch = writeBatch(db);
+  snapshot.docs.forEach((doc) => {
+    batch.delete(doc.ref);
+  });
+  
+  await batch.commit();
 };
 
 // ============ 승인 요청 ============

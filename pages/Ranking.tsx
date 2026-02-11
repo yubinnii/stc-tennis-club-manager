@@ -59,22 +59,34 @@ const Ranking: React.FC<RankingProps> = ({ user, navigate, isAdmin }) => {
   };
 
   const handleReset = async () => {
-    if (!window.confirm('모든 점수를 초기화하시겠습니까? (점수의 50%만 유지됩니다)')) return;
+    if (!window.confirm('모든 점수를 초기화하고 경기 기록을 삭제하시겠습니까?')) return;
     try {
-      const { getAllUsers, updateUser } = await import('../services/firebaseApi');
+      const { getAllUsers, updateUser, deleteAllMatches } = await import('../services/firebaseApi');
       const users = await getAllUsers();
       
+      // 모든 경기 기록 삭제
+      await deleteAllMatches();
+      
+      // 모든 사용자의 점수를 1500으로 초기화
+      const calculateTier = (singlesPoint: number, doublesPoint: number) => {
+        const avgPoint = (singlesPoint + doublesPoint) / 2;
+        if (avgPoint >= 1550) return 'Gold';
+        if (avgPoint >= 1450) return 'Silver';
+        return 'Bronze';
+      };
+
       for (const u of users) {
         await updateUser(u.id, {
-          singlesPoint: Math.floor(u.singlesPoint * 0.5),
-          doublesPoint: Math.floor(u.doublesPoint * 0.5)
+          singlesPoint: 1500,
+          doublesPoint: 1500,
+          tier: calculateTier(1500, 1500)
         });
       }
       
       window.alert('초기화되었습니다.');
       fetchRanking();
     } catch (e) {
-      window.alert('초기화 실패');
+      window.alert('초기화 실패: ' + (e as Error).message);
     }
   };
 
